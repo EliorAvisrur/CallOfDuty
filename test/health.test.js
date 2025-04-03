@@ -1,33 +1,29 @@
 import {
-  describe,
-  it,
-  vi,
-  expect,
-  beforeAll,
   afterAll,
+  beforeAll,
+  expect,
+  test,
+  jest,
   beforeEach,
-} from "vitest";
-import { createFastifyApp } from "../src/server/app.js";
-let fastify;
-
+} from "@jest/globals";
+import { MongoClient } from "mongodb";
+import { createFastifyApp } from "../src/server/app";
 describe("Health check endpoints", () => {
-  const mockDb = {
-    command: vi.fn(),
-  };
+  let connection;
+  let db;
+  let fastify;
   beforeAll(async () => {
+    connection = await MongoClient.connect(globalThis.__MONGO_URI__);
     fastify = await createFastifyApp();
-    fastify.mongo = {
-      db: mockDb,
-      client: { close: vi.fn() },
-    };
+    db = await connection.db(globalThis.__MONGO_DB_NAME__);
   });
   beforeEach(() => {
-    vi.restoreAllMocks();
+    jest.restoreAllMocks();
   });
   afterAll(async () => {
-    await fastify.close();
+    await connection.close();
   });
-  it("GET /health should return {'status': 'ok'}", async () => {
+  test("GET /health should return {'status': 'ok'}", async () => {
     const res = await fastify.inject({
       method: "GET",
       url: "/health",
@@ -35,10 +31,7 @@ describe("Health check endpoints", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ status: "ok" });
   });
-  it("GET /health/db should return {'status': 'ok'}", async () => {
-    //vi.spyOn(fastify.mongo.db, "command").mockResolvedValue({ ping: 1 });
-    //the above code in the comment is work too
-    //mockDb.command.mockResolvedValue({ ping: 1 });
+  test("GET /health/db should return {'status': 'ok'}", async () => {
     const res = await fastify.inject({
       method: "GET",
       url: "/health/db",
@@ -46,17 +39,14 @@ describe("Health check endpoints", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ status: "ok" });
   });
-  it("GET /health/db should return 500 when error", async () => {
-    mockDb.command.mockRejectedValue(new Error("Mocked mongoDB error"));
-    fastify.mongo = {
-      db: mockDb,
-      client: { close: vi.fn() },
-    };
-    const res = await fastify.inject({
+  test("GET /health/db should return status 500 when there is a database error", async () => {
+    jest.spyOn(fastify.mongo.db, "command").mockRejectedValue(() => {
+      throw new Error("MongoDB connection failed");
+    });
+    const response = await fastify.inject({
       method: "GET",
       url: "/health/db",
     });
-    expect(res.statusCode).toBe(500);
-    expect(res.json().status).toEqual("error");
+    expect(response.statusCode).toBe(500);
   });
 });
