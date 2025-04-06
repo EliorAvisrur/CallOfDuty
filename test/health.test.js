@@ -8,6 +8,7 @@ import {
 } from "@jest/globals";
 import { MongoClient } from "mongodb";
 import { createFastifyApp } from "../src/server/app";
+
 describe("Health check endpoints", () => {
   let connection;
   let db;

@@ -33,6 +33,53 @@ describe("Test duty endpoints", () => {
         payload: duty,
       });
       expect(res.statusCode).toBe(201);
+      expect(res.json()).toBeInstanceOf(Object);
+    });
+    test("POST /duties with duty that its startTime is after or equal to endTime should return a new soldier", async () => {
+      const duty = {
+        name: "check5",
+        description: "Stand guard at the main entrance.",
+        location: [-73.9857, 40.7484],
+        startTime: "2025-05-29T08:00:00Z",
+        endTime: "2025-05-28T12:00:00Z",
+        minRank: 4,
+        maxRank: 5,
+        constraints: ["No firearms", "Night duty only"],
+        soldiersRequired: 2,
+        value: 150,
+      };
+      const res = await fastify.inject({
+        method: "POST",
+        url: "/duties",
+        payload: duty,
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toEqual({
+        message: "The startTime should come before the endTime",
+      });
+    });
+    test("POST /duties with duty that its startTime before now should return a new soldier", async () => {
+      const duty = {
+        name: "check5",
+        description: "Stand guard at the main entrance.",
+        location: [-73.9857, 40.7484],
+        startTime: "2025-04-01T08:00:00Z",
+        endTime: "2025-04-28T12:00:00Z",
+        minRank: 4,
+        maxRank: 5,
+        constraints: ["No firearms", "Night duty only"],
+        soldiersRequired: 2,
+        value: 150,
+      };
+      const res = await fastify.inject({
+        method: "POST",
+        url: "/duties",
+        payload: duty,
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toEqual({
+        message: "The startTime should be in the future.",
+      });
     });
   });
   describe("Get duty", () => {
@@ -47,7 +94,7 @@ describe("Test duty endpoints", () => {
     test("GET /duties with querystring should return all exists duties after query filter", async () => {
       const res = await fastify.inject({
         method: "GET",
-        url: "/duties?minRank=4",
+        url: "/duties?minRank=4&location=[-73.9857,40.7484]",
       });
       expect(res.statusCode).toBe(200);
       expect(res.json()).toBeInstanceOf(Array);
@@ -65,7 +112,7 @@ describe("Test duty endpoints", () => {
     test("Delete /duties/:id should delete a duty", async () => {
       const res = await fastify.inject({
         method: "DELETE",
-        url: "/duties/67ee6dcf1b388c1077626885",
+        url: "/duties/67f273025dc3d8e289015239",
       });
       expect(res.statusCode).toBe(200);
       expect(res.json()).toHaveProperty("message");
@@ -155,6 +202,28 @@ describe("Test duty endpoints", () => {
         payload: body,
       });
       expect(res.statusCode).toBe(400);
+    });
+  });
+  describe("Put duty", () => {
+    test("Put /duties/:id/constraints ", async () => {
+      const constraintsUpdate = ["sickness", "kids"];
+      const res = await fastify.inject({
+        method: "PUT",
+        url: "/duties/67e4fce10ab77d3ca7637bfd/constraints",
+        payload: constraintsUpdate,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toBeInstanceOf(Object);
+    });
+    test("Put /duties/:id/constraints with wrong id should return a error", async () => {
+      const constraintsUpdate = ["sickness", "kids"];
+      const res = await fastify.inject({
+        method: "PUT",
+        url: "/duties/111111111111111111111111/constraints",
+        payload: constraintsUpdate,
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toHaveProperty("message");
     });
   });
 });

@@ -17,9 +17,11 @@ describe("Test Soldier endpoints", () => {
     connection = await MongoClient.connect(globalThis.__MONGO_URI__);
     fastify = await createFastifyApp();
   });
+
   afterAll(async () => {
     await connection.close();
   });
+
   describe("Create soldier", () => {
     test("POST /soldiers with body (with rankName and limitations instead of rankValue) should create a new soldier", async () => {
       const soldierData = {
@@ -91,6 +93,7 @@ describe("Test Soldier endpoints", () => {
   });
   describe("Get soldier", () => {
     const s1Id = "0112929";
+    const wrongId = "0000000";
     test("GET /soldiers/:id return a 200 status code if the soldier is found in db", async () => {
       const res = await fastify.inject({
         method: "GET",
@@ -99,6 +102,96 @@ describe("Test Soldier endpoints", () => {
       const returnSoldier = res.json();
       expect(res.statusCode).toBe(200);
       expect(returnSoldier._id).toBe(s1Id);
+    });
+    test("GET /soldiers/:id with wrong soldier id should return error", async () => {
+      const res = await fastify.inject({
+        method: "GET",
+        url: `/soldiers/${wrongId}`,
+      });
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toEqual({
+        message: `Soldier not found with id=${wrongId}`,
+      });
+    });
+  });
+  describe("Delete soldier", () => {
+    test("DELETE /soldiers/:id should delete a duty", async () => {
+      const existedId = "1111111";
+      const res = await fastify.inject({
+        method: "DELETE",
+        url: `/soldiers/${existedId}`,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({
+        message: `Soldier with ID ${existedId} deleted succesfully`,
+      });
+    });
+    test("DELETE /soldiers/:id with wrong id should return a error", async () => {
+      const wrongId = "0000000";
+      const res = await fastify.inject({
+        method: "DELETE",
+        url: `/soldiers/${wrongId}`,
+      });
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toEqual({
+        message: `Soldier with ID ${wrongId} not found!`,
+      });
+    });
+  });
+  describe("Patch soldier", () => {
+    test("PATCH /soldiers/:id should Patch a duty", async () => {
+      const updatedData = {
+        name: "Jame b1",
+      };
+      const existedId = "0112360";
+      const res = await fastify.inject({
+        method: "PATCH",
+        url: `/soldiers/${existedId}`,
+        payload: updatedData,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toBeInstanceOf(Object);
+    });
+    test("Patch /soldiers/:id with wrong id should return a error", async () => {
+      const updatedData = {
+        name: "Jame b1",
+      };
+      const wrongId = "0000000";
+      const res = await fastify.inject({
+        method: "PATCH",
+        url: `/soldiers/${wrongId}`,
+        payload: updatedData,
+      });
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toEqual({
+        message: `Soldier with ID ${wrongId} not found!`,
+      });
+    });
+  });
+  describe("Put soldier limitations", () => {
+    test("PUT /soldiers/:id/limitations with array of limitation should update the limitation property and return the updated soldier", async () => {
+      const existedId = "0112360";
+      const updateLimitationArray = ["sleeping"];
+      const res = await fastify.inject({
+        method: "PUT",
+        url: `/soldiers/${existedId}/limitations`,
+        payload: updateLimitationArray,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toBeInstanceOf(Object);
+    });
+    test("PUT /soldiers/:id/limitaoions with wrong id should return a error", async () => {
+      const wrongId = "0000000";
+      const updateLimitationArray = ["sleeping"];
+      const res = await fastify.inject({
+        method: "PUT",
+        url: `/soldiers/${wrongId}/limitations`,
+        payload: updateLimitationArray,
+      });
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toEqual({
+        message: `Soldier with ID ${wrongId} not found or no changes made`,
+      });
     });
   });
 });

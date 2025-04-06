@@ -23,16 +23,20 @@ export function soldierRoutes(fastify) {
     "/:id",
     { schema: getSoldierByIDSchema },
     async (request, reply) => {
-      const { id } = request.params;
-      const soldier = await fastify.mongo.db
-        .collection("soldiers")
-        .findOne({ _id: id });
-      if (!soldier) {
-        return reply
-          .status(404)
-          .send({ message: `Soldier not found with id=${id}` });
+      try {
+        const { id } = request.params;
+        const soldier = await fastify.mongo.db
+          .collection("soldiers")
+          .findOne({ _id: id });
+        if (!soldier) {
+          return reply
+            .status(404)
+            .send({ message: `Soldier not found with id=${id}` });
+        }
+        return reply.status(200).send(soldier);
+      } catch (error) {
+        reply.code(500).send({ status: "error", reason: err.message });
       }
-      return reply.status(200).send(soldier);
     }
   );
 
@@ -40,22 +44,25 @@ export function soldierRoutes(fastify) {
     "/",
     { schema: getSoldierByQuerySchema },
     async (request, reply) => {
-      const { name, limitations, rankValue, rankName } = request.query;
-      const filter = {
-        ...(name && { name }),
-        ...(limitations?.length > 0 && {
-          limitations: { $all: limitations[0].split(",") },
-        }),
-        ...((rankValue || rankName) && {
-          rank: getSoldierRankAndName(rankName, rankValue),
-        }),
-      };
-
-      const queryResult = await fastify.mongo.db
-        .collection("soldiers")
-        .find(filter)
-        .toArray();
-      return reply.status(200).send(queryResult);
+      try {
+        const { name, limitations, rankValue, rankName } = request.query;
+        const filter = {
+          ...(name && { name }),
+          ...(limitations?.length > 0 && {
+            limitations: { $all: limitations[0].split(",") },
+          }),
+          ...((rankValue || rankName) && {
+            rank: getSoldierRankAndName(rankName, rankValue),
+          }),
+        };
+        const queryResult = await fastify.mongo.db
+          .collection("soldiers")
+          .find(filter)
+          .toArray();
+        return reply.status(200).send(queryResult);
+      } catch (error) {
+        reply.code(500).send({ status: "error", reason: err.message });
+      }
     }
   );
 
@@ -63,18 +70,22 @@ export function soldierRoutes(fastify) {
     "/:id",
     { schema: deleteSoldierSchema },
     async (request, reply) => {
-      const { id } = request.params;
-      const result = await fastify.mongo.db
-        .collection("soldiers")
-        .deleteOne({ _id: id });
-      if (result.deletedCount === 0) {
+      try {
+        const { id } = request.params;
+        const result = await fastify.mongo.db
+          .collection("soldiers")
+          .deleteOne({ _id: id });
+        if (result.deletedCount === 0) {
+          return reply
+            .status(404)
+            .send({ message: `Soldier with ID ${id} not found!` });
+        }
         return reply
-          .status(404)
-          .send({ message: `Soldier with ID ${id} not found!` });
+          .status(200)
+          .send({ message: `Soldier with ID ${id} deleted succesfully` });
+      } catch (error) {
+        reply.code(500).send({ status: "error", reason: err.message });
       }
-      return reply
-        .status(200)
-        .send({ message: `Soldier with ID ${id} deleted succesfully` });
     }
   );
 
@@ -82,31 +93,34 @@ export function soldierRoutes(fastify) {
     "/:id",
     { schema: patchSoldierSchema },
     async (request, reply) => {
-      const { id } = request.params;
-      const { name, limitations, rankValue, rankName } = request.body;
-      const updateToSoldier = {
-        ...(name && { name }),
-        ...(limitations?.length > 0 && {
-          limitations: limitations.map((limit) => limit.toLowerCase()),
-        }),
-        ...((rankValue || rankName) && {
-          rank: getSoldierRankAndName(rankName, rankValue),
-        }),
-      };
+      try {
+        const { id } = request.params;
+        const { name, limitations, rankValue, rankName } = request.body;
+        const updateToSoldier = {
+          ...(name && { name }),
+          ...(limitations?.length > 0 && {
+            limitations: limitations.map((limit) => limit.toLowerCase()),
+          }),
+          ...((rankValue || rankName) && {
+            rank: getSoldierRankAndName(rankName, rankValue),
+          }),
+        };
 
-      const result = await fastify.mongo.db
-        .collection("soldiers")
-        .findOneAndUpdate(
-          { _id: id },
-          { $set: updateToSoldier, $currentDate: { updatedAt: true } },
-          { returnDocument: "after" }
-        );
-      if (!result) {
-        return reply
-          .status(404)
-          .send({ message: `Soldier with ID ${id} not found!` });
+        const result = await fastify.mongo.db
+          .collection("soldiers")
+          .findOneAndUpdate(
+            { _id: id },
+            { $set: updateToSoldier, $currentDate: { updatedAt: true } }
+          );
+        if (!result) {
+          return reply
+            .status(404)
+            .send({ message: `Soldier with ID ${id} not found!` });
+        }
+        return reply.status(200).send(result);
+      } catch (error) {
+        reply.code(500).send({ status: "error", reason: err.message });
       }
-      return reply.status(200).send(result);
     }
   );
 
@@ -114,24 +128,26 @@ export function soldierRoutes(fastify) {
     "/:id/limitations",
     { schema: putLimitationsSchema },
     async (request, reply) => {
-      const { id } = request.params;
-      const body = request.body;
-      const result = await fastify.mongo.db
-        .collection("soldiers")
-        .findOneAndUpdate(
-          { _id: id },
-          {
-            $addToSet: { limitations: { $each: body } },
-            $currentDate: { updatedAt: true },
-          },
-          { returnDocument: "after" }
-        );
-      if (!result) {
-        return reply.status(404).send({
-          message: `Soldier with ID ${id} not found or no changes made`,
-        });
+      try {
+        const { id } = request.params;
+        const body = request.body;
+        const result = await fastify.mongo.db
+          .collection("soldiers")
+          .findOneAndUpdate(
+            { _id: id },
+            {
+              $push: { limitations: { $each: body } },
+            }
+          );
+        if (!result) {
+          return reply.status(404).send({
+            message: `Soldier with ID ${id} not found or no changes made`,
+          });
+        }
+        return reply.status(200).send(result);
+      } catch (error) {
+        reply.code(500).send({ status: "error", reason: error.message });
       }
-      return reply.status(200).send(result);
     }
   );
 }

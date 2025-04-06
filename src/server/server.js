@@ -1,5 +1,6 @@
 import { createFastifyApp } from "./app.js";
 import { secrets } from "./secrets/dotenv.js";
+
 const fastify = createFastifyApp();
 const port = Number(secrets.port);
 

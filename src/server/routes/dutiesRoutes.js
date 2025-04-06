@@ -20,9 +20,11 @@ export async function dutiesRoutes(fastify) {
       if (newDuty.endTime < newDuty.startTime)
         return reply
           .status(400)
-          .send("The startTime should come before the endTime");
+          .send({ message: "The startTime should come before the endTime" });
       if (newDuty.startTime < new Date().toISOString())
-        return reply.status(400).send("The startTime should be in the future.");
+        return reply
+          .status(400)
+          .send({ message: "The startTime should be in the future." });
       const res = await fastify.mongo.db
         .collection("duties")
         .insertOne(newDuty);
