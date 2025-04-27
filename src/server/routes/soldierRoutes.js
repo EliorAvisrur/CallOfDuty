@@ -6,7 +6,7 @@ import {
   patchSoldierSchema,
   postSoldierSchema,
   putLimitationsSchema,
-} from "../schemas/soldierSchemas.js";
+} from "../schemas/soldierSchema.js";
 export function soldierRoutes(fastify) {
   fastify.post("/", { schema: postSoldierSchema }, async (request, reply) => {
     try {
@@ -110,7 +110,8 @@ export function soldierRoutes(fastify) {
           .collection("soldiers")
           .findOneAndUpdate(
             { _id: id },
-            { $set: updateToSoldier, $currentDate: { updatedAt: true } }
+            { $set: updateToSoldier, $currentDate: { updatedAt: true } },
+            { returnDocument: "after" }
           );
         if (!result) {
           return reply
@@ -137,7 +138,8 @@ export function soldierRoutes(fastify) {
             { _id: id },
             {
               $push: { limitations: { $each: body } },
-            }
+            },
+            { returnDocument: "after" }
           );
         if (!result) {
           return reply.status(404).send({

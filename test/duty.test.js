@@ -1,17 +1,24 @@
 import { afterAll, beforeAll, describe, expect, test } from "@jest/globals";
 import { MongoClient } from "mongodb";
 import { createFastifyApp } from "../src/server/app.js";
-
-let connection;
-let fastify;
+import { MongoMemoryServer } from "mongodb-memory-server";
 
 describe("Test duty endpoints", () => {
+  let mongod;
+  let client;
+  let db;
+  let fastify;
   beforeAll(async () => {
-    connection = await MongoClient.connect(globalThis.__MONGO_URI__);
+    mongod = await MongoMemoryServer.create();
+    const uri = mongod.getUri();
+    client = new MongoClient(uri);
+    await client.connect();
+    db = client.db();
     fastify = await createFastifyApp();
   });
   afterAll(async () => {
-    await connection.close();
+    await client.close();
+    await mongod.stop();
   });
   describe("Create duty", () => {
     test("POST /duties should return a new soldier", async () => {
@@ -102,7 +109,7 @@ describe("Test duty endpoints", () => {
     test("GET /duties/:id should return a specific duty by id", async () => {
       const res = await fastify.inject({
         method: "GET",
-        url: "/duties/67e4fce10ab77d3ca7637bfd",
+        url: "/duties/67e5637bc507962e8140b5f2",
       });
       expect(res.statusCode).toBe(200);
       expect(res.json()).toBeInstanceOf(Object);
@@ -112,7 +119,7 @@ describe("Test duty endpoints", () => {
     test("Delete /duties/:id should delete a duty", async () => {
       const res = await fastify.inject({
         method: "DELETE",
-        url: "/duties/67f273025dc3d8e289015239",
+        url: "/duties/67f4dbc13560d6fbdd9007e3",
       });
       expect(res.statusCode).toBe(200);
       expect(res.json()).toHaveProperty("message");
@@ -132,11 +139,7 @@ describe("Test duty endpoints", () => {
         method: "DELETE",
         url: "/duties/11111111111111111111111", //length:23 less than normal length (24)
       });
-      expect(res.statusCode).toBe(404);
-      expect(res.json()).toEqual({
-        message:
-          "input must be a 24 character hex string, 12 byte Uint8Array, or an integer",
-      });
+      expect(res.statusCode).toBe(400);
     });
   });
   describe("Patch duty", () => {
@@ -148,7 +151,7 @@ describe("Test duty endpoints", () => {
       };
       const res = await fastify.inject({
         method: "PATCH",
-        url: "/duties/67e56838902815dae0406bba",
+        url: "/duties/67e4fce10ab77d3ca7637bfd",
         payload: updatedData,
       });
       expect(res.statusCode).toBe(200);

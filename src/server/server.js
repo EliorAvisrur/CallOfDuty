@@ -1,10 +1,10 @@
 import { createFastifyApp } from "./app.js";
 import { secrets } from "./secrets/dotenv.js";
 
-const fastify = createFastifyApp();
-const port = Number(secrets.port);
+async function startServer() {
+  const fastify = createFastifyApp();
+  const port = Number(secrets.port) || 3000;
 
-const start = async () => {
   try {
     await fastify.listen({ port: port });
     fastify.log.info(`Server listening at ${fastify.server.address().port}`);
@@ -12,12 +12,20 @@ const start = async () => {
     fastify.log.error(err);
     process.exit(1);
   }
-};
-const closeConnection = async () => {
-  fastify.log.info("Shutting down server...");
-  await fastify.close();
-  process.exit(0);
-};
-start();
-process.on("SIGINT", closeConnection);
-process.on("SIGTERM", closeConnection);
+
+  const closeConnection = async () => {
+    try {
+      fastify.log.info("Shutting down server...");
+      await fastify.close();
+      process.exit(0);
+    } catch (error) {
+      fastify.log.error("Error during shutdown", error);
+      process.exit(1);
+    }
+  };
+
+  process.on("SIGINT", closeConnection);
+  process.on("SIGTERM", closeConnection);
+}
+
+startServer();

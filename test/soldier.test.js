@@ -8,18 +8,26 @@ import {
   test,
 } from "@jest/globals";
 import { MongoClient } from "mongodb";
-
-let connection;
-let fastify;
+import { MongoMemoryServer } from "mongodb-memory-server";
 
 describe("Test Soldier endpoints", () => {
+  let mongod;
+  let client;
+  let db;
+  let fastify;
+
   beforeAll(async () => {
-    connection = await MongoClient.connect(globalThis.__MONGO_URI__);
+    mongod = await MongoMemoryServer.create();
+    const uri = mongod.getUri();
+    client = new MongoClient(uri);
+    await client.connect();
+    db = client.db();
     fastify = await createFastifyApp();
   });
 
   afterAll(async () => {
-    await connection.close();
+    await client.close();
+    await mongod.stop();
   });
 
   describe("Create soldier", () => {
@@ -77,7 +85,7 @@ describe("Test Soldier endpoints", () => {
 
     test("POST /soldiers with wrong Data should return error", async () => {
       const soldierData = {
-        _id: "1111111",
+        _id: "0112360",
         name: "Check Check",
         rankName: "sergeant",
       };
@@ -141,7 +149,7 @@ describe("Test Soldier endpoints", () => {
   describe("Patch soldier", () => {
     test("PATCH /soldiers/:id should Patch a duty", async () => {
       const updatedData = {
-        name: "Jame b1",
+        name: "Jame b2",
       };
       const existedId = "0112360";
       const res = await fastify.inject({

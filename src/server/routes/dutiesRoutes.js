@@ -17,14 +17,6 @@ export async function dutiesRoutes(fastify) {
   fastify.post("/", { schema: postDutySchema }, async (request, reply) => {
     try {
       const newDuty = createDuty(request.body);
-      if (newDuty.endTime < newDuty.startTime)
-        return reply
-          .status(400)
-          .send({ message: "The startTime should come before the endTime" });
-      if (newDuty.startTime < new Date().toISOString())
-        return reply
-          .status(400)
-          .send({ message: "The startTime should be in the future." });
       const res = await fastify.mongo.db
         .collection("duties")
         .insertOne(newDuty);
@@ -38,7 +30,7 @@ export async function dutiesRoutes(fastify) {
     "/",
     {
       schema: getDutyByQuerySchema,
-      preValidation: async (request, reply) => {
+      preValidation: async (request, _) => {
         adjustDutyQueryString(request.query);
       },
     },
@@ -80,6 +72,11 @@ export async function dutiesRoutes(fastify) {
         const duty = await fastify.mongo.db
           .collection("duties")
           .findOne({ _id: new ObjectId(id) });
+        if (!duty) {
+          return reply
+            .status(400)
+            .send({ message: `Duty not found with id=${id}` });
+        }
         if (duty.status === "scheduled") {
           return reply
             .status(400)
