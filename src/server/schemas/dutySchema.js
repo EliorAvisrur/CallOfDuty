@@ -66,6 +66,9 @@ const postDutySchema = {
     .extend({ startTime: datetimeSchema, endTime: datetimeSchema })
     .refine((data) => data.endTime > data.startTime, {
       message: "endTime must be after startTime",
+    })
+    .refine((data) => data.startTime > new Date().toISOString(), {
+      message: "The startTime should be in the future.",
     }),
   response: {
     201: dutySchema,

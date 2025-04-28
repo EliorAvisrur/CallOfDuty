@@ -10,6 +10,7 @@ import {
 import { healthRoutes } from "./routes/healthRoutes.js";
 import { soldierRoutes } from "./routes/soldierRoutes.js";
 import { dutiesRoutes } from "./routes/dutiesRoutes.js";
+import { justiceBoardRoutes } from "./routes/justice_boardRoutes.js";
 
 export function createFastifyApp() {
   const fastify = Fastify({
@@ -41,6 +42,7 @@ export function createFastifyApp() {
   fastify.register(healthRoutes, { prefix: "/health" });
   fastify.register(soldierRoutes, { prefix: "/soldiers" });
   fastify.register(dutiesRoutes, { prefix: "/duties" });
+  fastify.register(justiceBoardRoutes, { prefix: "/justice-board" });
 
   return fastify;
 }
