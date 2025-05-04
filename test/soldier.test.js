@@ -1,33 +1,12 @@
 import { createFastifyApp } from '../src/server/app.js';
-import {
-  afterAll,
-  beforeAll,
-  describe,
-  expect,
-  jest,
-  test
-} from '@jest/globals';
-import { MongoClient } from 'mongodb';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { beforeAll, describe, expect, test } from '@jest/globals';
+import { secrets } from '../src/server/secrets/dotenv.js';
 
 describe('Test Soldier endpoints', () => {
-  let mongod;
-  let client;
-  let db;
   let fastify;
 
   beforeAll(async () => {
-    mongod = await MongoMemoryServer.create();
-    const uri = mongod.getUri();
-    client = new MongoClient(uri);
-    await client.connect();
-    db = client.db();
     fastify = await createFastifyApp();
-  });
-
-  afterAll(async () => {
-    await client.close();
-    await mongod.stop();
   });
 
   describe('Create soldier', () => {
@@ -99,9 +78,11 @@ describe('Test Soldier endpoints', () => {
       expect(res.json().error).toBe('Bad Request');
     });
   });
+
   describe('Get soldier', () => {
     const s1Id = '0112929';
     const wrongId = '0000000';
+
     test('GET /soldiers/:id return a 200 status code if the soldier is found in db', async () => {
       const res = await fastify.inject({
         method: 'GET',
@@ -111,6 +92,7 @@ describe('Test Soldier endpoints', () => {
       expect(res.statusCode).toBe(200);
       expect(returnSoldier._id).toBe(s1Id);
     });
+
     test('GET /soldiers/:id with wrong soldier id should return error', async () => {
       const res = await fastify.inject({
         method: 'GET',
@@ -122,8 +104,9 @@ describe('Test Soldier endpoints', () => {
       });
     });
   });
+
   describe('Delete soldier', () => {
-    test('DELETE /soldiers/:id should delete a duty', async () => {
+    test('DELETE /soldiers/:id should delete a duty - 1', async () => {
       const existedId = '1111111';
       const res = await fastify.inject({
         method: 'DELETE',
@@ -134,6 +117,19 @@ describe('Test Soldier endpoints', () => {
         message: `Soldier with ID ${existedId} deleted succesfully`
       });
     });
+
+    test('DELETE /soldiers/:id should delete a duty - 2', async () => {
+      const existedId = '1111112';
+      const res = await fastify.inject({
+        method: 'DELETE',
+        url: `/soldiers/${existedId}`
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({
+        message: `Soldier with ID ${existedId} deleted succesfully`
+      });
+    });
+
     test('DELETE /soldiers/:id with wrong id should return a error', async () => {
       const wrongId = '0000000';
       const res = await fastify.inject({
@@ -146,10 +142,12 @@ describe('Test Soldier endpoints', () => {
       });
     });
   });
+
   describe('Patch soldier', () => {
     test('PATCH /soldiers/:id should Patch a duty', async () => {
       const updatedData = {
-        name: 'Jame b2'
+        name: 'PatchCheck',
+        rankValue: 1
       };
       const existedId = '0112360';
       const res = await fastify.inject({
@@ -160,6 +158,7 @@ describe('Test Soldier endpoints', () => {
       expect(res.statusCode).toBe(200);
       expect(res.json()).toBeInstanceOf(Object);
     });
+
     test('Patch /soldiers/:id with wrong id should return a error', async () => {
       const updatedData = { name: 'Jame b1', rankValue: 3 };
       const wrongId = '0000000';
@@ -174,6 +173,7 @@ describe('Test Soldier endpoints', () => {
       });
     });
   });
+
   describe('Put soldier limitations', () => {
     test('PUT /soldiers/:id/limitations with array of limitation should update the limitation property and return the updated soldier', async () => {
       const existedId = '0112360';
@@ -186,6 +186,7 @@ describe('Test Soldier endpoints', () => {
       expect(res.statusCode).toBe(200);
       expect(res.json()).toBeInstanceOf(Object);
     });
+
     test('PUT /soldiers/:id/limitaoions with wrong id should return a error', async () => {
       const wrongId = '0000000';
       const updateLimitationArray = ['sleeping'];

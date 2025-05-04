@@ -1,26 +1,12 @@
-import { afterAll, beforeAll, describe, expect, test } from '@jest/globals';
-import { MongoClient } from 'mongodb';
+import { beforeAll, describe, expect, test } from '@jest/globals';
 import { createFastifyApp } from '../src/server/app';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { secrets } from '../src/server/secrets/dotenv';
 
 describe('Test justice-board endpoints', () => {
-  let mongod;
-  let client;
-  let db;
   let fastify;
 
   beforeAll(async () => {
-    mongod = await MongoMemoryServer.create();
-    const uri = mongod.getUri();
-    client = new MongoClient(uri);
-    await client.connect();
-    db = client.db();
     fastify = await createFastifyApp();
-  });
-
-  afterAll(async () => {
-    await client.close();
-    await mongod.stop();
   });
 
   test('Get justice-board', async () => {

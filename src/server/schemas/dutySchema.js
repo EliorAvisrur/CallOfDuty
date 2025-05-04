@@ -1,17 +1,17 @@
-import { ObjectId } from "@fastify/mongodb";
-import { z } from "zod";
+import { ObjectId } from '@fastify/mongodb';
+import { z } from 'zod';
 
 const ObjectIdSchema = z.instanceof(ObjectId);
 const ObjectIDStringSchema = z
   .string()
-  .regex(/^[0-9a-fA-F]{24}$/, "Invalid Object ID format");
+  .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Object ID format');
 const soldierIDSchema = z
   .string()
-  .regex(/^[0-9]{7}$/, "Invalid Soldier ID format");
+  .regex(/^[0-9]{7}$/, 'Invalid Soldier ID format');
 const nameSchema = z.string().min(3).max(50);
 const locationSchema = z.tuple([
   z.number().min(-90).max(90),
-  z.number().min(-180).max(180),
+  z.number().min(-180).max(180)
 ]);
 const rankSchema = z.number().min(0).max(6);
 const datetimeSchema = z.coerce.date();
@@ -19,11 +19,11 @@ const IDParamsSchema = z.object({ id: ObjectIDStringSchema }).strict();
 
 const statusSchema = z.object({
   status: z.string(),
-  date: datetimeSchema,
+  date: datetimeSchema
 });
 
-const futureDateSchema = datetimeSchema.refine((date) => date > new Date(), {
-  message: "Date must be in the future",
+const futureDateSchema = datetimeSchema.refine(date => date > new Date(), {
+  message: 'Date must be in the future'
 });
 
 const dutySchema = z
@@ -43,12 +43,12 @@ const dutySchema = z
     status: z.string(),
     statusHistory: z.array(statusSchema),
     createdAt: datetimeSchema,
-    updatedAt: datetimeSchema,
+    updatedAt: datetimeSchema
   })
   .strict();
 
 const messageSchema = z.object({
-  message: z.string(),
+  message: z.string()
 });
 
 const postDutySchema = {
@@ -61,19 +61,19 @@ const postDutySchema = {
       createdAt: true,
       updatedAt: true,
       startTime: true,
-      endTime: true,
+      endTime: true
     })
     .extend({ startTime: datetimeSchema, endTime: datetimeSchema })
-    .refine((data) => data.endTime > data.startTime, {
-      message: "endTime must be after startTime",
+    .refine(data => new Date(data.endTime) > new Date(data.startTime), {
+      message: 'endTime must be after startTime'
     })
-    .refine((data) => data.startTime > new Date().toISOString(), {
-      message: "The startTime should be in the future.",
+    .refine(data => new Date(data.startTime) > new Date(), {
+      message: 'The startTime should be in the future.'
     }),
   response: {
     201: dutySchema,
-    404: messageSchema,
-  },
+    404: messageSchema
+  }
 };
 
 const getDutyByQuerySchema = {
@@ -84,31 +84,31 @@ const getDutyByQuerySchema = {
       soldiers: true,
       statusHistory: true,
       createdAt: true,
-      updatedAt: true,
+      updatedAt: true
     })
     .extend({
-      constraints: z.string(),
+      constraints: z.string()
     })
     .partial(),
   response: {
-    200: z.array(dutySchema),
-  },
+    200: z.array(dutySchema)
+  }
 };
 
 const getDutyByIDSchema = {
   params: IDParamsSchema,
   response: {
     200: dutySchema,
-    404: messageSchema,
-  },
+    404: messageSchema
+  }
 };
 
 const deleteDutyByIDSchema = {
   params: IDParamsSchema,
   response: {
     204: messageSchema,
-    404: messageSchema,
-  },
+    404: messageSchema
+  }
 };
 
 const patchDutySchema = {
@@ -124,32 +124,32 @@ const patchDutySchema = {
       maxRank: rankSchema,
       constraints: z.array(z.string()),
       soldiersRequired: z.number().int().min(1),
-      value: z.number().positive(),
+      value: z.number().positive()
     })
     .strict()
     .partial()
     .refine(
-      (data) =>
+      data =>
         data.startTime && data.endTime ? data.endTime > data.startTime : true,
       {
-        message: "endTime must be after startTime",
+        message: 'endTime must be after startTime'
       }
     ),
   response: {
     200: dutySchema,
     404: messageSchema,
-    400: messageSchema,
-  },
+    400: messageSchema
+  }
 };
 
 const putDutySchema = {
   params: z.object({
-    id: ObjectIDStringSchema,
+    id: ObjectIDStringSchema
   }),
   body: z.array(z.string()),
   response: {
-    200: dutySchema,
-  },
+    200: dutySchema
+  }
 };
 
 export {
@@ -158,5 +158,5 @@ export {
   getDutyByIDSchema,
   deleteDutyByIDSchema,
   patchDutySchema,
-  putDutySchema,
+  putDutySchema
 };

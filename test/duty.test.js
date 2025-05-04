@@ -1,25 +1,14 @@
-import { afterAll, beforeAll, describe, expect, test } from '@jest/globals';
-import { MongoClient } from 'mongodb';
+import { beforeAll, describe, expect, test } from '@jest/globals';
 import { createFastifyApp } from '../src/server/app.js';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { secrets } from '../src/server/secrets/dotenv.js';
 
 describe('Test duty endpoints', () => {
-  let mongod;
-  let client;
-  let db;
   let fastify;
+  let idToDelete;
   beforeAll(async () => {
-    mongod = await MongoMemoryServer.create();
-    const uri = mongod.getUri();
-    client = new MongoClient(uri);
-    await client.connect();
-    db = client.db();
     fastify = await createFastifyApp();
   });
-  afterAll(async () => {
-    await client.close();
-    await mongod.stop();
-  });
+
   describe('Create duty', () => {
     test('POST /duties should return a new soldier', async () => {
       const duty = {
@@ -39,16 +28,18 @@ describe('Test duty endpoints', () => {
         url: '/duties',
         payload: duty
       });
+      idToDelete = res.json()._id;
       expect(res.statusCode).toBe(201);
       expect(res.json()).toBeInstanceOf(Object);
     });
-    test('POST /duties with duty that its startTime is after or equal to endTime should return a new soldier', async () => {
+
+    test('POST /duties with duty that its startTime is after or equal to endTime should return a error', async () => {
       const duty = {
         name: 'check5',
         description: 'Stand guard at the main entrance.',
         location: [-73.9857, 40.7484],
-        startTime: '2025-05-29T08:00:00Z',
-        endTime: '2025-05-28T12:00:00Z',
+        startTime: '2025-05-28T08:00:00Z',
+        endTime: '2025-05-28T08:00:00Z',
         minRank: 4,
         maxRank: 5,
         constraints: ['No firearms', 'Night duty only'],
@@ -65,6 +56,7 @@ describe('Test duty endpoints', () => {
         message: expect.stringContaining('endTime must be after startTime')
       });
     });
+
     test('POST /duties with duty that its startTime before now should return a new soldier', async () => {
       const duty = {
         name: 'check5',
@@ -91,6 +83,7 @@ describe('Test duty endpoints', () => {
       });
     });
   });
+
   describe('Get duty', () => {
     test('GET /duties should return all exists duties', async () => {
       const res = await fastify.inject({
@@ -100,6 +93,7 @@ describe('Test duty endpoints', () => {
       expect(res.statusCode).toBe(200);
       expect(res.json()).toBeInstanceOf(Array);
     });
+
     test('GET /duties with querystring should return all exists duties after query filter', async () => {
       const res = await fastify.inject({
         method: 'GET',
@@ -108,6 +102,7 @@ describe('Test duty endpoints', () => {
       expect(res.statusCode).toBe(200);
       expect(res.json()).toBeInstanceOf(Array);
     });
+
     test('GET /duties/:id should return a specific duty by id', async () => {
       const res = await fastify.inject({
         method: 'GET',
@@ -117,15 +112,17 @@ describe('Test duty endpoints', () => {
       expect(res.json()).toBeInstanceOf(Object);
     });
   });
+
   describe('Delete duty', () => {
     test('Delete /duties/:id should delete a duty', async () => {
       const res = await fastify.inject({
         method: 'DELETE',
-        url: '/duties/67f4dbc13560d6fbdd9007e3'
+        url: `/duties/${idToDelete}`
       });
       expect(res.statusCode).toBe(200);
       expect(res.json()).toHaveProperty('message');
     });
+
     test('Delete /duties/:id with wrong id', async () => {
       const wrongId = '111111111111111111111111';
       const res = await fastify.inject({
@@ -137,6 +134,7 @@ describe('Test duty endpoints', () => {
         message: `Duty not found with id=${wrongId}`
       });
     });
+
     test("Delete /duties/:id with wrong id (shorter than id's length)", async () => {
       const res = await fastify.inject({
         method: 'DELETE',
@@ -145,6 +143,7 @@ describe('Test duty endpoints', () => {
       expect(res.statusCode).toBe(400);
     });
   });
+
   describe('Patch duty', () => {
     test('Patch /duties/:id with body that includes the properties to update and their new values, should return the updated duty', async () => {
       const updatedData = {
@@ -160,6 +159,7 @@ describe('Test duty endpoints', () => {
       expect(res.statusCode).toBe(200);
       expect(res.json()).toBeInstanceOf(Object);
     });
+
     test('Patch /duties/:id with no body should return a error', async () => {
       const res = await fastify.inject({
         method: 'PATCH',
@@ -170,6 +170,7 @@ describe('Test duty endpoints', () => {
         message: expect.stringContaining('body/ Expected object, received null')
       });
     });
+
     test('Patch /duties/:id with empty body should return a error', async () => {
       const body = {};
       const res = await fastify.inject({
@@ -181,6 +182,7 @@ describe('Test duty endpoints', () => {
       const result = res.json();
       expect(result.message).toBe("body can't be empty");
     });
+
     test('Patch /duties/:id with body that include additional properties should return a error', async () => {
       const body = {
         name: 'check',
@@ -200,6 +202,7 @@ describe('Test duty endpoints', () => {
         )
       });
     });
+
     test('Patch /duties/:id with body that include properties with wrong values should return a error', async () => {
       const body = {
         name: 'c',
@@ -214,6 +217,7 @@ describe('Test duty endpoints', () => {
       expect(res.statusCode).toBe(400);
     });
   });
+
   describe('Put duty', () => {
     test('Put /duties/:id/constraints ', async () => {
       const constraintsUpdate = ['sickness', 'kids'];
@@ -225,6 +229,7 @@ describe('Test duty endpoints', () => {
       expect(res.statusCode).toBe(200);
       expect(res.json()).toBeInstanceOf(Object);
     });
+
     test('Put /duties/:id/constraints with wrong id should return a error', async () => {
       const constraintsUpdate = ['sickness', 'kids'];
       const res = await fastify.inject({
