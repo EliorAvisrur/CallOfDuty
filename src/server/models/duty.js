@@ -35,35 +35,22 @@ function createDuty(dutyProperties) {
   return newDuty;
 }
 
-function adjustDutyQueryString(query) {
-  Object.keys(query).forEach(key => {
-    if (
-      key === 'minRank' ||
-      key === 'maxRank' ||
-      key === 'soldiersRequired' ||
-      key === 'value'
-    ) {
-      query[key] = Number.parseInt(query[key]);
-    } else if (
-      key === 'location' ||
-      key === 'constraints' ||
-      key === 'soldiers'
-    ) {
-      query[key] = JSON.parse(query[key]);
+function adjustDutyToFilter(query) {
+  const numberOptions = ['minRank', 'maxRank', 'soldiersRequired', 'value'];
+  const jsonOptions = ['location', 'constraints', 'soldiers'];
+  const filter = Object.entries(query).reduce((acc, [key, value]) => {
+    if (numberOptions.includes(key)) {
+      value = Number.parseInt(value);
+    } else if (jsonOptions.includes(key)) {
+      value = JSON.parse(value);
     }
-  });
-}
-
-function filterForSchema(dutyProperties) {
-  const filter = {};
-
-  Object.entries(dutyProperties).forEach(([key, value]) => {
     if (value != null) {
-      filter[key] = value;
+      acc[key] = value;
     }
-  });
+    return acc;
+  }, {});
 
   return filter;
 }
 
-export { createDuty, filterForSchema, adjustDutyQueryString };
+export { createDuty, adjustDutyToFilter };
